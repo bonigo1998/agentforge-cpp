@@ -32,17 +32,28 @@ void check_curl(CURLcode code) {
 
 }
 
-std::string OllamaClient::chat(const std::string& task) const {
+std::string OllamaClient::chat(
+    const std::vector<ChatMessage>& messages) const {
     using nlohmann::json;
+
+    json json_messages = json::array();
+
+    for (const auto& message : messages) {
+        json_messages.push_back({
+            {"role", message.role},
+            {"content", message.content}
+        });
+    }
 
     const json request = {
         {"model", "qwen3:1.7b"},
-        {"messages", json::array({
-            {{"role", "user"}, {"content", task}}
-        })},
+        {"messages", json_messages},
         {"stream", false},
         {"think", false},
-        {"options", {{"num_ctx", 2048}, {"num_predict", 128}}}
+        {"options", {
+            {"num_ctx", 2048},
+            {"num_predict", 128}
+        }}
     };
 
     const std::string body = request.dump();

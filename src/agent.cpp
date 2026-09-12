@@ -45,6 +45,11 @@ void Agent::run() {
 "'/askfile <path> <question>' to ask about a file, "
         constexpr std::string_view ask_file_prefix = "/askfile ";
 
+if (task == "/askfile") {
+    std::cout << "Usage: /askfile <path> <question>\n\n";
+    continue;
+}
+
 if (task.starts_with(ask_file_prefix)) {
     const std::string request = task.substr(ask_file_prefix.size());
     const std::size_t separator = request.find(' ');

@@ -1,89 +1,105 @@
 # AgentForge C++
 
-A lightweight AI agent harness built in C++ to explore how language models use tools and complete tasks.
+A C++ project for learning how to build an AI agent harness, starting with a local language model connection.
 
-## Overview
+## Current Features
 
-An AI model can propose actions, but it needs software around it to execute those actions. That software is an **agent harness**.
+- Interactive terminal interface.
+- Local model responses through Ollama.
+- HTTP requests using libcurl.
+- JSON serialization and parsing using nlohmann/json.
+- Empty-input validation and an `exit` command.
+- Connection and request timeouts.
+- Request error handling that keeps the terminal session running.
 
-AgentForge will manage the interaction between a user, an AI model, and a set of tools. It will receive a task, send it to the model, execute permitted tool requests, and return the results until the task finishes or a configured limit is reached.
+The current version sends each task independently. Conversation history, workspace tools, and an autonomous tool execution loop are planned.
 
-## Project Status
+## Requirements
 
-🚧 Early development. The features below are planned and are not yet implemented.
+- macOS with Xcode or Command Line Tools
+- Git
+- CMake
+- A C++20 compiler
+- libcurl development files
+- nlohmann/json
+- Ollama
 
-This project is being built incrementally as a hands-on learning exercise in C++, AI agents, testing, and open-source development.
+Development has been tested on a Mac with an Apple A18 Pro chip and 8 GB of memory.
 
-## Planned Features
+## Build on macOS
 
-- **Terminal interface** — Submit tasks and view responses.
-- **Model integration** — Connect to a language model through an API.
-- **Tool execution** — Let the model request supported actions.
-- **Workspace boundaries** — Restrict file tools to a designated directory.
-- **Execution limits** — Cap agent steps and tool usage.
-- **Logging** — Record actions, tool results, and errors.
-- **Tests** — Verify tool behavior and agent control flow.
+Install the dependencies with Homebrew:
 
-Initial tools will focus on reading and writing workspace files. Arbitrary shell execution is outside the initial scope.
-
-## Planned Architecture
-
-```text
-User task
-    |
-    v
-Agent loop <------> Model API
-    |
-    v
-Tool dispatcher
-    |
-    v
-Workspace tools
-    |
-    v
-Tool results returned to the agent loop
+```bash
+brew install cmake nlohmann-json ollama
 ```
 
-The harness will validate tool requests before execution and stop when the model produces a final response or an execution limit is reached.
+The development setup uses libcurl provided by the installed Apple developer tools.
 
-## Technology
+Clone and build:
 
-- **Language:** C++
-- **Build system:** CMake
-- **Initial development platform:** macOS
-- **Editor:** Cursor
-- **Version control:** Git and GitHub
+```bash
+git clone https://github.com/bonigo1998/agentforge-cpp.git
+cd agentforge-cpp
+cmake -S . -B build -DCMAKE_PREFIX_PATH="$(brew --prefix nlohmann-json)"
+cmake --build build
+```
 
-API client and testing dependencies will be selected during implementation.
+## Run
+
+Start Ollama in one terminal with cloud features disabled:
+
+```bash
+OLLAMA_NO_CLOUD=1 ollama serve
+```
+
+Leave that terminal open.
+
+In a second terminal, download the model:
+
+```bash
+ollama pull qwen3:1.7b
+```
+
+From the project folder, start AgentForge:
+
+```bash
+./build/agentforge
+```
+
+Enter a task such as:
+
+```text
+Explain what a C++ class is in two short sentences.
+```
+
+Type `exit` to quit AgentForge.
+
+Model inference runs locally and requires no API key or paid API usage. Internet access is needed for the initial software and model downloads.
+
+## Current Configuration
+
+- Model: `qwen3:1.7b`
+- Endpoint: `http://127.0.0.1:11434/api/chat`
+- Context window: 2,048 tokens
+- Maximum generated response: 128 tokens
+- Connection timeout: 5 seconds
+- Total request timeout: 180 seconds
+
+Responses that reach the output limit are marked as shortened.
 
 ## Roadmap
 
-- [ ] Set up a minimal C++ project with CMake.
-- [ ] Build a terminal interface.
-- [ ] Add a model API client.
-- [ ] Define tool request and result formats.
+- [x] Create a C++20 project with CMake.
+- [x] Build an interactive command loop.
+- [x] Separate the interface and model client.
+- [x] Connect to a local model.
+- [ ] Add conversation history.
+- [ ] Define and validate tool requests.
 - [ ] Implement workspace file tools.
-- [ ] Build the agent loop.
-- [ ] Add execution limits and error handling.
-- [ ] Add logs and automated tests.
-- [ ] Document setup and example tasks.
-
-## Getting Started
-
-Build and run instructions will be added when the first executable is available.
-
-## Credentials and Safety
-
-API keys must stay outside source control. Examples will use placeholder values.
-
-Workspace checks and execution limits are planned safeguards, not a complete security sandbox. Run development experiments only with disposable, non-sensitive files.
+- [ ] Add an agent tool execution loop with step limits.
+- [ ] Add automated tests and execution logs.
 
 ## Contributing
 
-Feedback, bug reports, and focused contributions are welcome.
-
-For larger changes, please open an issue first to discuss the approach. Pull requests should explain the change and include relevant verification.
-
-## Author
-
-[bonigo1998](https://github.com/bonigo1998)
+Focused improvements and bug reports are welcome. Pull requests should explain the change and how it was verified.

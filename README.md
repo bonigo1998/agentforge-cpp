@@ -11,6 +11,10 @@ A C++ project for learning how to build an AI agent harness, starting with a loc
 - Empty-input validation and an `exit` command.
 - Connection and request timeouts.
 - Request error handling that keeps the terminal session running.
+- Read-only workspace file access through `/read <path>`.
+- File questions through `/askfile <path> <question>`.
+- Workspace boundary checks that reject absolute paths and paths outside the project.
+
 
 The current version sends each task independently. Conversation history, workspace tools, and an autonomous tool execution loop are planned.
 
@@ -77,6 +81,13 @@ Type `exit` to quit AgentForge.
 
 Model inference runs locally and requires no API key or paid API usage. Internet access is needed for the initial software and model downloads.
 
+## Workspace Commands
+
+Read a file directly in the terminal:
+
+```text
+/read README.md
+
 ## Current Configuration
 
 - Model: `qwen3:1.7b`
@@ -103,3 +114,13 @@ Responses that reach the output limit are marked as shortened.
 ## Contributing
 
 Focused improvements and bug reports are welcome. Pull requests should explain the change and how it was verified.
+
+
+Update the roadmap entries:
+
+```markdown
+- [x] Add conversation history.
+- [x] Implement workspace file tools.
+- [ ] Define and validate tool requests.
+- [ ] Add an agent tool execution loop with step limits.
+- [ ] Add automated tests and execution logs.

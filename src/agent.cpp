@@ -7,6 +7,7 @@
 #include <exception>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 void Agent::run() {
@@ -18,6 +19,7 @@ void Agent::run() {
 
     std::cout << "AgentForge C++\n";
     std::cout << "Enter a task, '/read <path>' to read a file, "
+                 "'/askfile <path> <question>' to ask about a file, "
                  "'/clear' to clear history, or 'exit' to quit.\n\n";
 
     while (true) {
@@ -41,67 +43,73 @@ void Agent::run() {
 
         constexpr std::string_view read_prefix = "/read ";
 
-    "'/read <path>' to read a file, "
-"'/askfile <path> <question>' to ask about a file, "
-        constexpr std::string_view ask_file_prefix = "/askfile ";
+        if (task.starts_with(read_prefix)) {
+            const std::string path = task.substr(read_prefix.size());
 
-if (task == "/askfile") {
-    std::cout << "Usage: /askfile <path> <question>\n\n";
-    continue;
-}
-
-if (task.starts_with(ask_file_prefix)) {
-    const std::string request = task.substr(ask_file_prefix.size());
-    const std::size_t separator = request.find(' ');
-
-    if (separator == std::string::npos) {
-        std::cout << "Usage: /askfile <path> <question>\n\n";
-        continue;
-    }
-
-    const std::string path = request.substr(0, separator);
-    const std::string question = request.substr(separator + 1);
-
-    if (path.empty() || question.empty()) {
-        std::cout << "Usage: /askfile <path> <question>\n\n";
-        continue;
-    }
-
-    try {
-        const std::string file_contents = file_tool.read(path);
-        const std::string model_task =
-            question + "\n\nFile contents from " + path + ":\n" +
-            file_contents;
-
-        auto next_history = history;
-        next_history.push_back({"user", model_task});
-
-        std::cout << "Contacting local model...\n" << std::flush;
-        const std::string answer = client.chat(next_history);
-
-        next_history.push_back({"assistant", answer});
-
-        if (next_history.size() > max_history_messages) {
-            next_history.erase(
-                next_history.begin(),
-                next_history.begin() + 2
-            );
-        }
-
-        history.swap(next_history);
-        std::cout << "Agent: " << answer << "\n\n";
-    } catch (const std::exception& error) {
-        std::cerr << "File or model error: "
-                  << error.what() << "\n\n";
-    }
-
-    continue;
-}
+            if (path.empty()) {
+                std::cout << "Usage: /read <path>\n\n";
+                continue;
+            }
 
             try {
                 std::cout << file_tool.read(path) << "\n\n";
             } catch (const std::exception& error) {
                 std::cerr << "File error: " << error.what() << "\n\n";
+            }
+
+            continue;
+        }
+
+        constexpr std::string_view ask_file_prefix = "/askfile ";
+
+        if (task == "/askfile") {
+            std::cout << "Usage: /askfile <path> <question>\n\n";
+            continue;
+        }
+
+        if (task.starts_with(ask_file_prefix)) {
+            const std::string request = task.substr(ask_file_prefix.size());
+            const std::size_t separator = request.find(' ');
+
+            if (separator == std::string::npos) {
+                std::cout << "Usage: /askfile <path> <question>\n\n";
+                continue;
+            }
+
+            const std::string path = request.substr(0, separator);
+            const std::string question = request.substr(separator + 1);
+
+            if (path.empty() || question.empty()) {
+                std::cout << "Usage: /askfile <path> <question>\n\n";
+                continue;
+            }
+
+            try {
+                const std::string file_contents = file_tool.read(path);
+                const std::string model_task =
+                    question + "\n\nFile contents from " + path + ":\n" +
+                    file_contents;
+
+                auto next_history = history;
+                next_history.push_back({"user", model_task});
+
+                std::cout << "Contacting local model...\n" << std::flush;
+                const std::string answer = client.chat(next_history);
+
+                next_history.push_back({"assistant", answer});
+
+                if (next_history.size() > max_history_messages) {
+                    next_history.erase(
+                        next_history.begin(),
+                        next_history.begin() + 2
+                    );
+                }
+
+                history.swap(next_history);
+                std::cout << "Agent: " << answer << "\n\n";
+            } catch (const std::exception& error) {
+                std::cerr << "File or model error: "
+                          << error.what() << "\n\n";
             }
 
             continue;

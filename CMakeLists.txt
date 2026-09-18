@@ -14,7 +14,8 @@ add_executable(agentforge
     src/main.cpp
     src/agent.cpp
     src/ollama_client.cpp
-src/file_tool.cpp
+    src/file_tool.cpp
+    src/tool_request_parser.cpp
 )
 
 set_target_properties(agentforge PROPERTIES

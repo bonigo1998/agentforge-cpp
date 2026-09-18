@@ -16,7 +16,7 @@ A C++ project for learning how to build an AI agent harness, starting with a loc
 - Workspace boundary checks that reject absolute paths and paths outside the project.
 
 
-The current version sends each task independently. Conversation history, workspace tools, and an autonomous tool execution loop are planned.
+The current version keeps recent conversation history and supports read-only workspace commands. An autonomous tool execution loop is planned.
 
 ## Requirements
 
@@ -87,6 +87,17 @@ Read a file directly in the terminal:
 
 ```text
 /read README.md
+```
+
+Ask the local model a question using a file:
+
+```text
+/askfile README.md Summarize this project in one sentence.
+```
+
+Use `/clear` to remove conversation history and `exit` to quit.
+
+File paths must be relative to the directory where AgentForge starts. Absolute paths and paths that escape the workspace are rejected.
 
 ## Current Configuration
 
@@ -105,22 +116,12 @@ Responses that reach the output limit are marked as shortened.
 - [x] Build an interactive command loop.
 - [x] Separate the interface and model client.
 - [x] Connect to a local model.
-- [ ] Add conversation history.
-- [ ] Define and validate tool requests.
-- [ ] Implement workspace file tools.
+- [x] Add conversation history.
+- [x] Define and validate tool requests.
+- [x] Implement workspace file tools.
 - [ ] Add an agent tool execution loop with step limits.
 - [ ] Add automated tests and execution logs.
 
 ## Contributing
 
 Focused improvements and bug reports are welcome. Pull requests should explain the change and how it was verified.
-
-
-Update the roadmap entries:
-
-```markdown
-- [x] Add conversation history.
-- [x] Implement workspace file tools.
-- [ ] Define and validate tool requests.
-- [ ] Add an agent tool execution loop with step limits.
-- [ ] Add automated tests and execution logs.

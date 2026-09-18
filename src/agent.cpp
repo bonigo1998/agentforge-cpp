@@ -2,17 +2,38 @@
 #include "chat_message.hpp"
 #include "file_tool.hpp"
 #include "ollama_client.hpp"
+#include "tool_request_parser.hpp"
 
 #include <cstddef>
 #include <exception>
 #include <iostream>
 #include <string>
-#include <string_view>
 #include <vector>
+
+namespace {
+
+std::string join_arguments(
+    const std::vector<std::string>& arguments,
+    std::size_t start_index) {
+    std::string result;
+
+    for (std::size_t index = start_index; index < arguments.size(); ++index) {
+        if (!result.empty()) {
+            result += ' ';
+        }
+
+        result += arguments[index];
+    }
+
+    return result;
+}
+
+}  // namespace
 
 void Agent::run() {
     OllamaClient client;
     FileTool file_tool;
+    ToolRequestParser parser;
     std::vector<ChatMessage> history;
 
     constexpr std::size_t max_history_messages = 8;
@@ -35,83 +56,80 @@ void Agent::run() {
             break;
         }
 
-        if (task == "/clear") {
-            history.clear();
-            std::cout << "Conversation history cleared.\n\n";
-            continue;
-        }
+        const auto tool_request = parser.parse(task);
 
-        constexpr std::string_view read_prefix = "/read ";
+        if (tool_request.has_value()) {
+            const std::string& command = tool_request->name;
+            const auto& arguments = tool_request->arguments;
 
-        if (task.starts_with(read_prefix)) {
-            const std::string path = task.substr(read_prefix.size());
-
-            if (path.empty()) {
-                std::cout << "Usage: /read <path>\n\n";
-                continue;
-            }
-
-            try {
-                std::cout << file_tool.read(path) << "\n\n";
-            } catch (const std::exception& error) {
-                std::cerr << "File error: " << error.what() << "\n\n";
-            }
-
-            continue;
-        }
-
-        constexpr std::string_view ask_file_prefix = "/askfile ";
-
-        if (task == "/askfile") {
-            std::cout << "Usage: /askfile <path> <question>\n\n";
-            continue;
-        }
-
-        if (task.starts_with(ask_file_prefix)) {
-            const std::string request = task.substr(ask_file_prefix.size());
-            const std::size_t separator = request.find(' ');
-
-            if (separator == std::string::npos) {
-                std::cout << "Usage: /askfile <path> <question>\n\n";
-                continue;
-            }
-
-            const std::string path = request.substr(0, separator);
-            const std::string question = request.substr(separator + 1);
-
-            if (path.empty() || question.empty()) {
-                std::cout << "Usage: /askfile <path> <question>\n\n";
-                continue;
-            }
-
-            try {
-                const std::string file_contents = file_tool.read(path);
-                const std::string model_task =
-                    question + "\n\nFile contents from " + path + ":\n" +
-                    file_contents;
-
-                auto next_history = history;
-                next_history.push_back({"user", model_task});
-
-                std::cout << "Contacting local model...\n" << std::flush;
-                const std::string answer = client.chat(next_history);
-
-                next_history.push_back({"assistant", answer});
-
-                if (next_history.size() > max_history_messages) {
-                    next_history.erase(
-                        next_history.begin(),
-                        next_history.begin() + 2
-                    );
+            if (command == "clear") {
+                if (!arguments.empty()) {
+                    std::cout << "Usage: /clear\n\n";
+                } else {
+                    history.clear();
+                    std::cout << "Conversation history cleared.\n\n";
                 }
 
-                history.swap(next_history);
-                std::cout << "Agent: " << answer << "\n\n";
-            } catch (const std::exception& error) {
-                std::cerr << "File or model error: "
-                          << error.what() << "\n\n";
+                continue;
             }
 
+            if (command == "read") {
+                if (arguments.size() != 1) {
+                    std::cout << "Usage: /read <path>\n\n";
+                    continue;
+                }
+
+                try {
+                    std::cout << file_tool.read(arguments[0]) << "\n\n";
+                } catch (const std::exception& error) {
+                    std::cerr << "File error: "
+                              << error.what() << "\n\n";
+                }
+
+                continue;
+            }
+
+            if (command == "askfile") {
+                if (arguments.size() < 2) {
+                    std::cout << "Usage: /askfile <path> <question>\n\n";
+                    continue;
+                }
+
+                const std::string& path = arguments[0];
+                const std::string question = join_arguments(arguments, 1);
+
+                try {
+                    const std::string file_contents = file_tool.read(path);
+                    const std::string model_task =
+                        question + "\n\nFile contents from " + path + ":\n" +
+                        file_contents;
+
+                    auto next_history = history;
+                    next_history.push_back({"user", model_task});
+
+                    std::cout << "Contacting local model...\n" << std::flush;
+                    const std::string answer = client.chat(next_history);
+
+                    next_history.push_back({"assistant", answer});
+
+                    if (next_history.size() > max_history_messages) {
+                        next_history.erase(
+                            next_history.begin(),
+                            next_history.begin() + 2
+                        );
+                    }
+
+                    history.swap(next_history);
+                    std::cout << "Agent: " << answer << "\n\n";
+                } catch (const std::exception& error) {
+                    std::cerr << "File or model error: "
+                              << error.what() << "\n\n";
+                }
+
+                continue;
+            }
+
+            std::cout << "Unknown command: /" << command << "\n\n";
             continue;
         }
 

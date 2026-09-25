@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include "chat_message.hpp"
 #include "model_response.hpp"
 

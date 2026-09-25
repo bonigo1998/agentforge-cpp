@@ -6,10 +6,13 @@
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
+#include <string>
+
 
 namespace {
 
-// libcurl calls this function when response data arrives.
+using nlohmann::json;
+
 std::size_t collect_response(char* data, std::size_t size,
                              std::size_t count, void* userdata) noexcept {
     const std::size_t bytes = size * count;
@@ -22,7 +25,6 @@ std::size_t collect_response(char* data, std::size_t size,
     }
 }
 
-// Convert libcurl errors into C++ exceptions.
 void check_curl(CURLcode code) {
     if (code != CURLE_OK) {
         throw std::runtime_error(
@@ -30,24 +32,10 @@ void check_curl(CURLcode code) {
     }
 }
 
-}
-
-std::string OllamaClient::chat(
-    const std::vector<ChatMessage>& messages) const {
-    using nlohmann::json;
-
-    json json_messages = json::array();
-
-    for (const auto& message : messages) {
-        json_messages.push_back({
-            {"role", message.role},
-            {"content", message.content}
-        });
-    }
-
-    const json request = {
+json make_request(const json& messages) {
+    return {
         {"model", "qwen3:1.7b"},
-        {"messages", json_messages},
+        {"messages", messages},
         {"stream", false},
         {"think", false},
         {"options", {
@@ -55,7 +43,9 @@ std::string OllamaClient::chat(
             {"num_predict", 128}
         }}
     };
+}
 
+json send_request(const json& request) {
     const std::string body = request.dump();
     std::string response;
 
@@ -93,7 +83,8 @@ std::string OllamaClient::chat(
 
     if (status != 200) {
         throw std::runtime_error(
-            "Ollama returned HTTP " + std::to_string(status) + ": " + response);
+            "Ollama returned HTTP " + std::to_string(status) + ": " +
+            response);
     }
 
     const json result = json::parse(response);
@@ -102,7 +93,26 @@ std::string OllamaClient::chat(
         throw std::runtime_error("Ollama returned an incomplete response.");
     }
 
-    std::string answer = result.at("message").at("content").get<std::string>();
+    return result;
+}
+
+}  // namespace
+
+std::string OllamaClient::chat(
+    const std::vector<ChatMessage>& messages) const {
+    json json_messages = json::array();
+
+    for (const auto& message : messages) {
+        json_messages.push_back({
+            {"role", message.role},
+            {"content", message.content}
+        });
+    }
+
+    const json result = send_request(make_request(json_messages));
+
+    std::string answer =
+        result.at("message").at("content").get<std::string>();
 
     if (answer.empty()) {
         throw std::runtime_error("Ollama returned an empty answer.");
@@ -113,4 +123,63 @@ std::string OllamaClient::chat(
     }
 
     return answer;
+}
+
+ModelResponse OllamaClient::chat_with_tools(
+    const json& messages) const {
+    if (!messages.is_array()) {
+        throw std::invalid_argument("Messages must be a JSON array.");
+    }
+
+    const json parameters = {
+        {"type", "object"},
+        {"required", json::array({"path"})},
+        {"properties", {{"path", {
+            {"type", "string"},
+            {"description", "Workspace-relative file path"}
+        }}}},
+        {"additionalProperties", false}
+    };
+
+    const json file_tool = {
+        {"type", "function"},
+        {"function", {
+            {"name", "read_file"},
+            {"description", "Read a text file in the project workspace"},
+            {"parameters", parameters}
+        }}
+    };
+
+    json request = make_request(messages);
+    request["tools"] = json::array({file_tool});
+
+    const json result = send_request(request);
+    const json& message = result.at("message");
+
+    ModelResponse reply;
+    reply.content = message.at("content").get<std::string>();
+
+    if (message.contains("tool_calls") &&
+        !message.at("tool_calls").is_null()) {
+        if (!message.at("tool_calls").is_array()) {
+            throw std::runtime_error("Ollama returned invalid tool calls.");
+        }
+
+        reply.tool_calls = message.at("tool_calls");
+    }
+
+    if (reply.content.empty() && reply.tool_calls.empty()) {
+        throw std::runtime_error("Ollama returned an empty response.");
+    }
+
+    if (result.value("done_reason", "") == "length") {
+        if (!reply.tool_calls.empty()) {
+            throw std::runtime_error(
+                "Ollama stopped while generating a tool call.");
+        }
+
+        reply.content += "\n[Response stopped at the output limit.]";
+    }
+
+    return reply;
 }

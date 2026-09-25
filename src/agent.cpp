@@ -1,3 +1,4 @@
+#include "agent_loop.hpp"
 #include "agent.hpp"
 #include "chat_message.hpp"
 #include "file_tool.hpp"
@@ -33,6 +34,7 @@ std::string join_arguments(
 void Agent::run() {
     OllamaClient client;
     FileTool file_tool;
+    AgentLoop loop(client, file_tool);
     ToolRequestParser parser;
     std::vector<ChatMessage> history;
 
@@ -109,7 +111,6 @@ void Agent::run() {
 
                     std::cout << "Contacting local model...\n" << std::flush;
                     const std::string answer = client.chat(next_history);
-
                     next_history.push_back({"assistant", answer});
 
                     if (next_history.size() > max_history_messages) {
@@ -142,8 +143,7 @@ void Agent::run() {
             auto next_history = history;
             next_history.push_back({"user", task});
 
-            std::cout << "Contacting local model...\n" << std::flush;
-            const std::string answer = client.chat(next_history);
+            const std::string answer = loop.run(history, task);
 
             next_history.push_back({"assistant", answer});
 

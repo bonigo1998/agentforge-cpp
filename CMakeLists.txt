@@ -13,11 +13,11 @@ find_package(nlohmann_json CONFIG REQUIRED)
 add_executable(agentforge
     src/main.cpp
     src/agent.cpp
+    src/agent_loop.cpp
     src/ollama_client.cpp
     src/file_tool.cpp
     src/tool_request_parser.cpp
 )
-
 set_target_properties(agentforge PROPERTIES
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON

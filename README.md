@@ -16,7 +16,7 @@ A C++ project for learning how to build an AI agent harness, starting with a loc
 - Workspace boundary checks that reject absolute paths and paths outside the project.
 
 
-The current version keeps recent conversation history and supports read-only workspace commands. An autonomous tool execution loop is planned.
+The current version keeps recent conversation history, supports read-only workspace commands, and can execute model-requested file reads through a bounded agent loop.
 
 ## Requirements
 
@@ -99,6 +99,28 @@ Use `/clear` to remove conversation history and `exit` to quit.
 
 File paths must be relative to the directory where AgentForge starts. Absolute paths and paths that escape the workspace are rejected.
 
+## Agent Tool Loop
+
+Ask the model to use a workspace file:
+
+```text
+Use read_file to read src/chat_message.hpp. List the fields in ChatMessage.
+```
+
+When the model requests `read_file`, AgentForge validates the arguments, attempts the file read, and returns the result to the model.
+
+The terminal prints `Using read_file tool...` when a file-read attempt starts.
+
+Current limits:
+
+- At most three model requests and two file-read attempts per task.
+- Exactly one tool call is accepted per model response.
+- Unsupported tools and invalid arguments are rejected.
+- File contents larger than 4,000 bytes are replaced with an error message.
+- File paths must stay inside the workspace.
+
+Tool selection depends on the model. A correct-looking answer alone does not prove that a file was read. Use `/read` for direct file contents or `/askfile` to supply file context explicitly.
+
 ## Current Configuration
 
 - Model: `qwen3:1.7b`
@@ -119,7 +141,7 @@ Responses that reach the output limit are marked as shortened.
 - [x] Add conversation history.
 - [x] Define and validate tool requests.
 - [x] Implement workspace file tools.
-- [ ] Add an agent tool execution loop with step limits.
+- [x] Add an agent tool execution loop with step limits.
 - [ ] Add automated tests and execution logs.
 
 ## Contributing

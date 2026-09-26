@@ -17,7 +17,9 @@ add_executable(agentforge
     src/ollama_client.cpp
     src/file_tool.cpp
     src/tool_request_parser.cpp
+    src/execution_logger.cpp
 )
+
 set_target_properties(agentforge PROPERTIES
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON

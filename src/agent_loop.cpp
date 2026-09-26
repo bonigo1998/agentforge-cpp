@@ -1,4 +1,6 @@
 #include "agent_loop.hpp"
+#include "execution_logger.hpp"
+#include <chrono>
 
 #include "file_tool.hpp"
 #include "ollama_client.hpp"
@@ -11,8 +13,13 @@
 #include <stdexcept>
 #include <string>
 
-AgentLoop::AgentLoop(const OllamaClient& client, const FileTool& file_tool)
-    : client_(client), file_tool_(file_tool) {}
+AgentLoop::AgentLoop(
+    const OllamaClient& client,
+    const FileTool& file_tool,
+    ExecutionLogger& logger)
+    : client_(client),
+      file_tool_(file_tool),
+      logger_(logger) {}
 
 std::string AgentLoop::run(
     const std::vector<ChatMessage>& history,
@@ -48,7 +55,33 @@ std::string AgentLoop::run(
     constexpr std::size_t max_file_bytes = 4000;
 
     for (std::size_t step = 0; step < max_model_steps; ++step) {
-        const ModelResponse response = client_.chat_with_tools(messages);
+        logger_.log("model_request", {
+            {"step", step + 1}
+        });
+
+        const auto started = std::chrono::steady_clock::now();
+
+        ModelResponse response;
+
+        try {
+            response = client_.chat_with_tools(messages);
+        } catch (const std::exception&) {
+            logger_.log("model_error", {
+                {"step", step + 1}
+            });
+            throw;
+        }
+
+        const auto elapsed_ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - started
+            ).count();
+
+        logger_.log("model_response", {
+            {"step", step + 1},
+            {"elapsed_ms", elapsed_ms},
+            {"tool_call_count", response.tool_calls.size()}
+        });
 
         if (response.tool_calls.empty()) {
             return response.content;

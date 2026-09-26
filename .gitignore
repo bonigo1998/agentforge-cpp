@@ -70,3 +70,6 @@ Testing/
 
 
 /build/
+
+# Local execution logs
+/.agentforge/logs/

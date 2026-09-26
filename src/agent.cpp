@@ -4,6 +4,7 @@
 #include "file_tool.hpp"
 #include "ollama_client.hpp"
 #include "tool_request_parser.hpp"
+#include "execution_logger.hpp"
 
 #include <cstddef>
 #include <exception>
@@ -32,9 +33,12 @@ std::string join_arguments(
 }  // namespace
 
 void Agent::run() {
+    ExecutionLogger logger(".agentforge/logs/events.jsonl");
+    logger.log("session_start");
+
     OllamaClient client;
     FileTool file_tool;
-    AgentLoop loop(client, file_tool);
+    AgentLoop loop(client, file_tool, logger);
     ToolRequestParser parser;
     std::vector<ChatMessage> history;
 
@@ -161,5 +165,6 @@ void Agent::run() {
         }
     }
 
+    logger.log("session_end");
     std::cout << "Goodbye!\n";
 }

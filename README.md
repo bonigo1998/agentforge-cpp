@@ -132,6 +132,28 @@ Tool selection depends on the model. A correct-looking answer alone does not pro
 
 Responses that reach the output limit are marked as shortened.
 
+## Testing
+
+From the project directory, configure, build, and run the automated tests:
+
+```bash
+cmake -S . -B build -DBUILD_TESTING=ON &&
+cmake --build build &&
+ctest --test-dir build --output-on-failure --no-tests=error
+```
+
+The tests cover:
+
+- Slash-command parsing.
+- Workspace file reads and missing-file errors.
+- Rejection of absolute paths and paths that escape the workspace.
+- Symlinks that stay inside or point outside the workspace.
+
+These tests run without Ollama or a model download. They do not test model responses or the complete agent loop.
+
+GitHub Actions also builds the project and runs both test suites on Ubuntu for pull requests targeting `main` and pushes to `main`.
+
+
 ## Roadmap
 
 - [x] Create a C++20 project with CMake.
@@ -142,7 +164,8 @@ Responses that reach the output limit are marked as shortened.
 - [x] Define and validate tool requests.
 - [x] Implement workspace file tools.
 - [x] Add an agent tool execution loop with step limits.
-- [ ] Add automated tests and execution logs.
+- [x] Add automated tests and GitHub Actions.
+- [ ] Add execution logs.
 
 ## Contributing
 

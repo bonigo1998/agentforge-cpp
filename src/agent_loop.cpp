@@ -135,17 +135,42 @@ std::string AgentLoop::run(
             {"tool_calls", response.tool_calls}
         });
 
+        logger_.log("tool_start", {
+            {"step", step + 1},
+            {"tool", "read_file"}
+        });
+
         std::cout << "Using read_file tool...\n" << std::flush;
 
         std::string tool_result;
 
         try {
             tool_result = file_tool_.read(path);
+            const auto bytes = tool_result.size();
 
-            if (tool_result.size() > max_file_bytes) {
+            if (bytes > max_file_bytes) {
+                logger_.log("tool_error", {
+                    {"step", step + 1},
+                    {"tool", "read_file"},
+                    {"reason", "file_too_large"},
+                    {"bytes", bytes}
+                });
+
                 tool_result = "File is too large to send to the model.";
+            } else {
+                logger_.log("tool_success", {
+                    {"step", step + 1},
+                    {"tool", "read_file"},
+                    {"bytes", bytes}
+                });
             }
         } catch (const std::exception& error) {
+            logger_.log("tool_error", {
+                {"step", step + 1},
+                {"tool", "read_file"},
+                {"reason", "read_failed"}
+            });
+
             tool_result = std::string("File error: ") + error.what();
         }
 
